@@ -1,7 +1,6 @@
 #include <Stepper.h>
 #include <time.h>
-#include "Wifi.h"
-#include <Keypad.h>
+#include <WiFi.h>
 
 #define IN1 19
 #define IN2 18
@@ -9,24 +8,25 @@
 #define IN4 17
 
 const int stepsPerRevolution = 2048;
+Stepper myStepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
 
-const byte lines = 4;
-const bytes columns = 4;
+//const byte lines = 4;
+//const byte columns = 4;
+//
+//char keys[lines][columns] = {
+//  {'1','2','3','A'},
+//  {'4','5','6','B'},
+//  {'7','8','9','C'},
+//  {'*','0','#','D'}
+//};
+//
+//byte linePins[lines] = {13, 12, 14, 27};
+//byte columnsPins[columns] = {26, 25, 33, 32};
+//Keypad keyBoard = Keypad(makeKeymap(keys), linePins, columnsPins, lines, columns);
+//String keyboardInput = "";
 
-char keys[lines][columns] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
-};
-
-byte linePins[lines] = {13, 12, 14, 27};
-byte colunmsPins[columns] = {26, 25, 33, 32};
-Keypad keyBoard = Keypad(makeKeymap(keys), linePins, columnsPins, lines, columns);
-String keyboardInput = "";
-
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "Pixel7Giovani";
+const char* password = "naotemsenha";
 const char* ntpServer = "pool.ntp.org";
 const long  brasiliaTime = -3 * 3600;
 const int   summerTimeOffset = 0;
@@ -39,6 +39,41 @@ const float storageCarouselSlots[21] = {
   342.8571
 };
 
+struct medicineTimeAndSlot {
+  int weekDay
+  int hour;
+  int minutes; 
+  int slot;
+};
+
+medicineTimeAndSlot medsCalender[21];
+
+bool isNotSunday(){
+  struct tm currentTime;
+
+  if (!getLocalTime(&currentTime)) {
+    return false; 
+  } 
+  if (currentTime.tm_wday != 0) {
+    return true; 
+  } else {
+    return false;
+  }
+  
+}
+
+bool haveProgramToday(){
+  struct tm currentTime;
+  for(int i=0; i > 21 ;i++){
+    if(currentTime.tm_wday == medsCalender[i].weekDay{
+      if(medsCalender[i].hour != 0){
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -50,11 +85,27 @@ void setup() {
   }
   Serial.println("\nWifi -> OK");
   configTime(brasiliaTime, summerTimeOffset, ntpServer);
-
+  
+  myStepper.setSpeed(5);
 
 }
 
+
 void loop() {
-  // put your main code here, to run repeatedly:
+  struct tm currentTime;
+  if(!getLocaTime($currentTime)){
+    return;
+  }
+  
+  if(isNotSunday){
+   if(haveProgramToday){
+    
+   }else{
+    // aqui vai ter um print no lcd dizendo que não programação para hoje
+   }
+  }   
+  else{
+    
+  }
 
 }
