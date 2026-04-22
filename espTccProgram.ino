@@ -25,11 +25,6 @@ Stepper myStepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
 //Keypad keyBoard = Keypad(makeKeymap(keys), linePins, columnsPins, lines, columns);
 //String keyboardInput = "";
 
-const char* ssid = "SANTOS"; //Pixel7Giovani
-const char* password = "santos374"; //naotemsenha
-const char* ntpServer = "pool.ntp.org";
-const long  brasiliaTime = -3 * 3600;
-const int   summerTimeOffset = 0;
 
 const float storageCarouselSlots[21] = {
   0.0000,   17.1429,  34.2857,  51.4286,  68.5714,
@@ -49,13 +44,13 @@ struct medicineTimeAndSlot {
 medicineTimeAndSlot medsProgramCalender[21];
 int medsProgramTotalCount = 0;
 
-bool isNotSunday(){
+bool isSunday(){
   struct tm currentTime;
   if (!getLocalTime(&currentTime)) {
     return false; 
   } 
 
-  if (currentTime.tm_wday != 0) {
+  if (currentTime.tm_wday == 0) {
     return true; 
   } else {
     return false;
@@ -63,7 +58,7 @@ bool isNotSunday(){
   
 }
 
-bool haveProgramToday(){
+bool HaveProgramsForToday(){
   struct tm currentTime;
   if (!getLocalTime(&currentTime)) {
     return false; 
@@ -78,90 +73,66 @@ bool haveProgramToday(){
 }
 
 bool isTimeForMeds(){
+
   struct tm currentTime;
   if (!getLocalTime(&currentTime)) {
     return 0; 
   } 
 
-  Serial.println("vendo se e hora de remedio");
-  for(int i=0; i < 21; i++){
-    if(currentTime.tm_hour == medsProgramCalender[i].hour){
-      return true;
-      Serial.println("sim he hora do remedio");
+  int theMedForThisHour;
+
+  if (currentTime.tm_min % 15 == 0){
+    for(int i = 0; i < 21; i++){
+      if(currentTime.tm_hour == medsProgramCalender[i].hour && currentTime.tm_min == medsProgramCalender[i].minutes){
+        return true;
+      }
     }
   }
-  return false;
+
 }
 
 void makeNewProgram(){
+
   Serial.println("Digite qual compartimento deseja programar:(1 a 21)\n");
   while (Serial.available() == 0){ delay(10); }
-  int selectedSlot = Serial.parseInt();
+  medsProgramCalender[medsProgramTotalCount].slot = Serial.parseInt();
   while (Serial.available() > 0) {
-  Serial.read();
+    Serial.read();
   }
 
   Serial.println("digite a hora do remedio:\n");
   while (Serial.available() == 0){ delay(10); }
-  medsProgramCalender[selectedSlot].hour = Serial.parseInt();
+  medsProgramCalender[medsProgramTotalCount].hour = Serial.parseInt();
   while (Serial.available() > 0) {
   Serial.read();
   }
-
+  
   Serial.printf("digite os minutos:\n");
   while (Serial.available() == 0){ delay(10); }
-  medsProgramCalender[selectedSlot].minutes = Serial.parseInt();
+  medsProgramCalender[medsProgramTotalCount].minutes = Serial.parseInt();
   while (Serial.available() > 0) {
   Serial.read();
   }
 
   Serial.println("digite o dia do remedio:\n");
   while (Serial.available() == 0){ delay(10); }
-  medsProgramCalender[selectedSlot].weekDay = Serial.parseInt();
+  medsProgramCalender[medsProgramTotalCount].weekDay = Serial.parseInt();
   while (Serial.available() > 0) {
     Serial.read();
   }
 
-  Serial.printf("programacao salva: Slot %02d, Horario %02d:%02d, Dia %02d.\n", selectedSlot, medsProgramCalender[selectedSlot].hour, medsProgramCalender[selectedSlot].minutes, medsProgramCalender[selectedSlot].weekDay);
+  medsProgramTotalCount ++;
+  Serial.printf("programacao salva: Slot %02d, Horario %02d:%02d, Dia %02d.\n", medsProgramTotalCount, medsProgramCalender[medsProgramTotalCount].hour, medsProgramCalender[medsProgramTotalCount].minutes, medsProgramCalender[medsProgramTotalCount].weekDay);
 
 }
 
-void sleepyDayMode(){
-
-  if (haveProgramToday() == true) {
-    return; 
-  }
-
-  Serial.println("\n--- MODO SLEEPY DAY ATIVADO ---");
-  Serial.println("Nenhum remedio para hoje. Aguardando a meia-noite...");
-
-  while (true) {
-    
-    // Atualiza o relógio
-    if (!getLocalTime(&currentTime)) {
-      delay(1000);
-      return 0 
-    }
-
-    if (currentTime.tm_hour == 0 && currentTime.tm_min == 0) {
-      Serial.println("\nMeia-noite! Acordando para um novo dia...");
-      break;
-    }
-
-    if (currentTime.tm_min == 0 && currentTime.tm_sec < 5) {
-      Serial.printf("Zzz... Sleepy Mode... %02d:%02d\n", currentTime.tm_hour, currentTime.tm_min);
-    }
-
-    delay(30000);
-  }
-}
 
 int findTodayPrograms(int* foudedProgramsFoToday){
    
   struct tm currentTime;
   if (!getLocalTime(&currentTime)) {
     delay(1000);
-    return 0
+    return 0;
   }
 
   int foundedProgramsForToday[3]; 
@@ -174,12 +145,16 @@ int findTodayPrograms(int* foudedProgramsFoToday){
     }
   }
 
-  return couter;
+  return counter;
 }
+
 
 void setup() {
   Serial.begin(115200);
-
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
   WiFi.begin(ssid, password);
   Serial.print("connecting to wifi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -188,14 +163,19 @@ void setup() {
   }
   Serial.println("\nWifi -> OK");
   configTime(brasiliaTime, summerTimeOffset, ntpServer);
-
+  
   
   myStepper.setSpeed(5);
 
   makeNewProgram();
-
+  
 }
 
+const char* ssid = "******"; 
+const char* password = "*****";
+const char* ntpServer = "pool.ntp.org";
+const long  brasiliaTime = -3 * 3600;
+const int   summerTimeOffset = 0;
 
 void loop() {
   struct tm currentTime;
@@ -203,19 +183,30 @@ void loop() {
     return;
   }
 
-  sleepyDayMode();
-
   Serial.printf("%02d:%02d:%02d\n", currentTime.tm_hour, currentTime.tm_min, currentTime.tm_sec);
-  
-  if(isNotSunday() && haveProgramToday()){
+
+  if(HaveProgramsForToday){
+
+    if(isSunday){
+
+    }else {
+      // aqui vai ter uma parte de notificação 
+    }
+    
     int todayPrograms[3];
     int programQuantityForToday = findTodayPrograms(todayPrograms);
-
-    if(isTimeForMeds()){
-      Serial.println("it is time for meds");
-      delay(10000);
+    
+    Serial.printf("Os remadios para hoje sao:\n");
+    for(int i = 0; i < 3; i++){
+      Serial.printf(" Slot %02d;\n Horario %02d:%02d;\n Dia %02d.\n", medsProgramCalender[todayPrograms[i]].slot, medsProgramCalender[todayPrograms[i]].hour, medsProgramCalender[todayPrograms[i]].minutes, medsProgramCalender[todayPrograms[i]].weekDay);
     }
+
+    isTimeForMeds();
+
+  }else{
+    delay(10000);
+    // alguma coisa pra ele dormir aumentar o delay do loop para ele não ficar atualizando de 15 em 15 min
   }
 
-  delay(10000);
+
 }
